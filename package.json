@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "prisma generate && next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
+    "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
-    "db:seed": "bun run db/seed.ts",
-    "db:generate": "prisma generate"
+    "db:seed": "bun run db/seed.ts"
+    
   },
   "dependencies": {
     "firebase": "^12.8.0",
