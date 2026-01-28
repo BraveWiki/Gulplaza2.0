@@ -4,6 +4,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+
 const getPrismaClient = () => {
   // Ensure DATABASE_URL is set
   const databaseUrl = process.env.DATABASE_URL
@@ -24,12 +25,8 @@ const getPrismaClient = () => {
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   })
 }
-
-export const db =
-  globalForPrisma.prisma ??
-  globalForPrisma.prisma :
-  getPrismaClient()
+export const db = globalForPrisma.prisma ?? getPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = db
+  globalForPrisma.prisma = db;
 }
