@@ -12,14 +12,11 @@ import {
   ref,
   push,
   onChildAdded,
-  onChildRemoved,
   query,
   orderByChild,
   limitToLast,
-  get,
   DataSnapshot,
 } from 'firebase/database'
-import { database } from '@/lib/firebase'
 
 interface ChatMessage {
   id: string
@@ -41,6 +38,7 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
   const [inputMessage, setInputMessage] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
+  const [firebaseAvailable, setFirebaseAvailable] = useState(false)
   const [currentUserId] = useState(() => {
     // Generate a persistent user ID for this session
     if (typeof window !== 'undefined') {
@@ -54,47 +52,74 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
     return `user-${Date.now()}`
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (!productId || typeof window === 'undefined') return
 
-    // Reference to the chat room for this product
-    const chatRoomRef = ref(database, `chat-rooms/${productId}/messages`)
+    const initChat = async () => {
+      try {
+        // Import Firebase dynamically
+        const firebaseModule = await import('@/lib/firebase')
+        const database = firebaseModule.database
 
-    // Query last 50 messages
-    const messagesQuery = query(chatRoomRef, orderByChild('timestamp'), limitToLast(50))
+        // Check if database is available
+        if (!database) {
+          console.warn('⚠️ Firebase not initialized. Chat disabled.')
+          setFirebaseAvailable(false)
+          return
+        }
 
-    let initialLoad = true
+        setFirebaseAvailable(true)
 
-    // Listen for new messages
-    const onMessageAdded = (snapshot: DataSnapshot) => {
-      if (snapshot.exists()) {
-        const message = snapshot.val()
-        setMessages((prev) => {
-          // Check if message already exists
-          if (prev.find((m) => m.id === snapshot.key)) {
-            return prev
+        // Reference to chat room for this product
+        const chatRoomRef = ref(database, `chat-rooms/${productId}/messages`)
+
+        // Query last 50 messages
+        const messagesQuery = query(chatRoomRef, orderByChild('timestamp'), limitToLast(50))
+
+        // Listen for new messages
+        const onMessageAdded = (snapshot: DataSnapshot) => {
+          if (snapshot.exists()) {
+            const message = snapshot.val()
+            setMessages((prev) => {
+              // Check if message already exists
+              if (prev.find((m) => m.id === snapshot.key)) {
+                return prev
+              }
+              return [
+                ...prev,
+                {
+                  id: snapshot.key!,
+                  senderId: message.senderId,
+                  senderRole: message.senderRole,
+                  content: message.content,
+                  timestamp: message.timestamp,
+                },
+              ]
+            })
+            setIsConnected(true)
           }
-          return [
-            ...prev,
-            {
-              id: snapshot.key!,
-              senderId: message.senderId,
-              senderRole: message.senderRole,
-              content: message.content,
-              timestamp: message.timestamp,
-            },
-          ]
-        })
+        }
+
+        // Subscribe to new messages
+        const unsubscribe = onChildAdded(messagesQuery, onMessageAdded)
+        cleanupRef.current = unsubscribe
+
         setIsConnected(true)
+      } catch (error) {
+        console.error('❌ Chat initialization error:', error)
+        setFirebaseAvailable(false)
       }
     }
 
-    // Subscribe to new messages
-    const unsubscribe = onChildAdded(messagesQuery, onMessageAdded)
+    initChat()
 
     return () => {
-      unsubscribe()
+      if (cleanupRef.current) {
+        cleanupRef.current()
+        cleanupRef.current = null
+      }
     }
   }, [productId])
 
@@ -104,11 +129,20 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
   }, [messages])
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || isSending || !productId) return
+    if (!inputMessage.trim() || isSending || !productId || !firebaseAvailable) return
 
     setIsSending(true)
 
     try {
+      // Import Firebase dynamically
+      const firebaseModule = await import('@/lib/firebase')
+      const database = firebaseModule.database
+
+      if (!database) {
+        console.warn('⚠️ Firebase not available')
+        return
+      }
+
       const chatRoomRef = ref(database, `chat-rooms/${productId}/messages`)
 
       await push(chatRoomRef, {
@@ -156,10 +190,18 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
             <div>
               <DialogTitle className="text-lg">Chat with Seller</DialogTitle>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={isConnected ? 'default' : 'secondary'} className="text-xs">
-                  {isConnected ? 'Connected' : 'Connecting...'}
-                </Badge>
-                {!isConnected && <Loader2 className="w-3 h-3 animate-spin" />}
+                {!firebaseAvailable ? (
+                  <Badge variant="secondary" className="text-xs">
+                    Chat Unavailable
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge variant={isConnected ? 'default' : 'secondary'} className="text-xs">
+                      {isConnected ? 'Connected' : 'Connecting...'}
+                    </Badge>
+                    {!isConnected && <Loader2 className="w-3 h-3 animate-spin" />}
+                  </>
+                )}
               </div>
             </div>
             <MessageCircle className="w-5 h-5 text-gray-400" />
@@ -169,13 +211,19 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
         <div className="flex-1 overflow-hidden flex flex-col">
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {messages.length === 0 && (
+              {!firebaseAvailable ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500">Chat is temporarily unavailable</p>
+                  <p className="text-sm text-gray-400 mt-2">Firebase configuration required</p>
+                </div>
+              ) : messages.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="w-12 h-12 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500">Start a conversation with the seller</p>
                   <p className="text-sm text-gray-400 mt-2">Messages are anonymous</p>
                 </div>
-              )}
+              ) : null}
 
               {messages.map((message) => (
                 <div
@@ -211,13 +259,17 @@ export function Chat({ productId, shopkeeperId, isOpen = false, onClose }: ChatP
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message..."
-                disabled={!isConnected || isSending}
+                placeholder={
+                  firebaseAvailable
+                    ? "Type your message..."
+                    : "Chat is unavailable"
+                }
+                disabled={!firebaseAvailable || !isConnected || isSending}
                 className="flex-1"
               />
               <Button
                 onClick={sendMessage}
-                disabled={!isConnected || !inputMessage.trim() || isSending}
+                disabled={!firebaseAvailable || !isConnected || !inputMessage.trim() || isSending}
                 className="bg-orange-500 hover:bg-orange-600"
               >
                 {isSending ? (
