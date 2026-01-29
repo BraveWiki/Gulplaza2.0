@@ -4,7 +4,6 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-
 const getPrismaClient = () => {
   // Ensure DATABASE_URL is set
   const databaseUrl = process.env.DATABASE_URL
