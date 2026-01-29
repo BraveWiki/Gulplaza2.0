@@ -20,6 +20,7 @@ model Shopkeeper {
   shopName  String
   shopNumber String?
   products  Product[]
+  orders    Order[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -45,10 +46,12 @@ model Order {
   buyerAddress    String
   totalAmount     Float
   paymentMethod   String   @default("cod") // cod = Cash on Delivery
-  status          String   @default("pending") // pending, confirmed, delivered, cancelled
+  status          String   @default("pending") // pending, confirmed, delivered, cancelled, rejected
+  shopkeeperId   String?
+  shopkeeper      Shopkeeper? @relation(fields: [shopkeeperId], references: [id])
   orderItems      OrderItem[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt()
 }
 
 model OrderItem {
