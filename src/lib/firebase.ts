@@ -1,5 +1,5 @@
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getDatabase, Database } from 'firebase/database';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
+import { getDatabase, Database } from 'firebase/database'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,19 +12,31 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase
-let app: FirebaseApp
-let database: Database
+let app: FirebaseApp | null = null
+let database: Database | null = null
 
-if (typeof window !== 'undefined') {
-  // Only initialize on client side
-  const apps = getApps()
-  if (!apps.length) {
-    app = initializeApp(firebaseConfig)
-  } else {
-    app = apps[0]
+try {
+  if (typeof window !== 'undefined') {
+    // Check if required config is available
+    if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
+      console.warn('⚠️ Firebase config not fully set. Chat will be disabled.')
+    }
+
+    // Only initialize on client side
+    const apps = getApps()
+    if (!apps.length) {
+      app = initializeApp(firebaseConfig)
+      database = getDatabase(app)
+      console.log('✅ Firebase initialized successfully')
+    } else {
+      app = apps[0]
+      database = getDatabase(app)
+      console.log('✅ Firebase using existing app')
+    }
   }
-  database = getDatabase(app)
+} catch (error) {
+  console.error('❌ Firebase initialization error:', error)
+  // Don't throw - let the app work without chat
 }
 
 export { app, database }
-
