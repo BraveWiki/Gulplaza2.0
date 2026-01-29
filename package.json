@@ -10,6 +10,8 @@
     "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
     "db:seed": "bun run db/seed.ts"
+  "db:migrate": "prisma migrate dev",
+  "db:reset": "prisma migrate reset"
     
   },
   "dependencies": {
