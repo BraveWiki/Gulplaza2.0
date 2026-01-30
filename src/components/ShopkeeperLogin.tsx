@@ -30,7 +30,7 @@ export function ShopkeeperLogin({ onLoginSuccess }: ShopkeeperLoginProps) {
       setError('')
 
       const response = await fetch('/api/shopkeepers/by-phone', {
-        method: 'GET',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       })
