@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, ShoppingCart, Plus, Menu, X, Mic, MicOff } from 'lucide-react'
+import { Search, ShoppingCart, Plus, Menu, X, Mic, MicOff, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,8 @@ import { Cart } from '@/components/Cart'
 import { AddProductForm } from '@/components/AddProductForm'
 import { ProductDetail } from '@/components/ProductDetail'
 import { Checkout } from '@/components/Checkout'
+import { ShopkeeperLogin } from '@/components/ShopkeeperLogin'
+import { SellerDashboard } from '@/components/SellerDashboard'
 
 export default function Home() {
   const { currentView, setView, goToProductDetail, selectedProductId } = useViewStore()
@@ -21,6 +23,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [isRecording, setIsRecording] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [shopkeeperId, setShopkeeperId] = useState<string | null>(null)
+  const [shopkeeper, setShopkeeper] = useState<any>(null)
 
   const categories = ['all', 'clothing', 'electronics', 'jewelry', 'accessories', 'food']
 
@@ -55,6 +59,12 @@ export default function Home() {
     }
   }
 
+  const handleShopkeeperLogin = (id: string, data: any) => {
+    setShopkeeperId(id)
+    setShopkeeper(data)
+    setView('seller-dashboard')
+  }
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
@@ -75,6 +85,12 @@ export default function Home() {
         return <AddProductForm />
       case 'checkout':
         return <Checkout />
+      case 'shopkeeper-login':
+        return <ShopkeeperLogin onLoginSuccess={handleShopkeeperLogin} />
+      case 'seller-dashboard':
+        return shopkeeperId && shopkeeper ? (
+          <SellerDashboard shopkeeperId={shopkeeperId} shopkeeper={shopkeeper} />
+        ) : null
       default:
         return null
     }
@@ -142,6 +158,14 @@ export default function Home() {
               </Button>
               <Button
                 variant="ghost"
+                onClick={() => setView('shopkeeper-login')}
+                className={currentView === 'shopkeeper-login' ? 'text-orange-600' : ''}
+              >
+                <Store className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => setView('cart')}
                 className={`relative ${currentView === 'cart' ? 'text-orange-600' : ''}`}
               >
@@ -184,6 +208,17 @@ export default function Home() {
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Sell Products
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setView('shopkeeper-login')
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className={currentView === 'shopkeeper-login' ? 'bg-orange-50 text-orange-600' : 'justify-start'}
+                  >
+                    <Store className="w-4 h-4 mr-2" />
+                    Seller Dashboard
                   </Button>
                   <Button
                     variant="ghost"
@@ -256,50 +291,52 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={currentView === 'seller-dashboard' ? '' : 'flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         {renderContent()}
       </main>
 
-      {/* Footer */}
-      <footer className="mt-auto bg-white border-t border-gray-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">About Gul Plaza</h3>
-              <p className="text-sm text-gray-600">
-                Your trusted online marketplace for quality products. Shop with confidence and ease.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>
-                  <button onClick={() => setView('home')} className="hover:text-orange-600">
-                    Browse Products
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => setView('add-product')} className="hover:text-orange-600">
-                    Sell with Us
-                  </button>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4">Payment Options</h3>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">Cash on Delivery</Badge>
+      {/* Footer - Only show when not in dashboard */}
+      {currentView !== 'seller-dashboard' && (
+        <footer className="mt-auto bg-white border-t border-gray-200">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">About Gul Plaza</h3>
+                <p className="text-sm text-gray-600">
+                  Your trusted online marketplace for quality products. Shop with confidence and ease.
+                </p>
               </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Pay when you receive your order. Safe and convenient!
-              </p>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Quick Links</h3>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>
+                    <button onClick={() => setView('home')} className="hover:text-orange-600">
+                      Browse Products
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => setView('add-product')} className="hover:text-orange-600">
+                      Sell with Us
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Payment Options</h3>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">Cash on Delivery</Badge>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Pay when you receive your order. Safe and convenient!
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
+              <p>© 2024 Gul Plaza Marketplace. All rights reserved.</p>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center text-sm text-gray-500">
-            <p>© 2024 Gul Plaza Marketplace. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   )
 }
