@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-type View = 'home' | 'cart' | 'product-detail' | 'add-product' | 'checkout'
+type View = 'home' | 'cart' | 'product-detail' | 'add-product' | 'checkout' | 'shopkeeper-login' | 'seller-dashboard'
 
 interface ViewStore {
   currentView: View
